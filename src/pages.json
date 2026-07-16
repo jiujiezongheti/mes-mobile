@@ -1,0 +1,69 @@
+{
+  "pages": [
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "登录"
+      }
+    },
+    {
+      "path": "pages/dashboard/index",
+      "style": {
+        "navigationBarTitleText": "MES",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/order/index",
+      "style": {
+        "navigationBarTitleText": "工单管理"
+      }
+    },
+    {
+      "path": "pages/task/index",
+      "style": {
+        "navigationBarTitleText": "作业任务"
+      }
+    },
+    {
+      "path": "pages/quality/index",
+      "style": {
+        "navigationBarTitleText": "质量检验"
+      }
+    },
+    {
+      "path": "pages/device/index",
+      "style": {
+        "navigationBarTitleText": "设备管理"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "MES",
+    "navigationBarBackgroundColor": "#F8F8F8",
+    "backgroundColor": "#F8F8F8"
+  },
+  "tabBar": {
+    "color": "#999",
+    "selectedColor": "#007aff",
+    "list": [
+      {
+        "pagePath": "pages/dashboard/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/order/index",
+        "text": "工单"
+      },
+      {
+        "pagePath": "pages/quality/index",
+        "text": "质量"
+      },
+      {
+        "pagePath": "pages/device/index",
+        "text": "设备"
+      }
+    ]
+  }
+}
