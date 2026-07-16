@@ -59,8 +59,8 @@ src/
 
 ## 相关项目
 
-- [mes-api](https://github.com/xxx/mes-api) — 后端 API 服务
-- [mes-admin](https://github.com/xxx/mes-admin) — PC 管理后台
+- [mes-api](https://github.com/jiujiezongheti/mes-api) — 后端 API 服务
+- [mes-admin](https://github.com/jiujiezongheti/mes-admin) — PC 管理后台
 
 ## 截图
 
