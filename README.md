@@ -40,6 +40,8 @@ npm run dev:mp-weixin
 npm run dev:app
 ```
 
+> 默认账号：`admin` / `admin123`
+
 ## 目录结构
 
 ```
@@ -61,10 +63,6 @@ src/
 
 - [mes-api](https://github.com/jiujiezongheti/mes-api) — 后端 API 服务
 - [mes-admin](https://github.com/jiujiezongheti/mes-admin) — PC 管理后台
-
-## 截图
-
-> TODO
 
 ## 开源协议
 

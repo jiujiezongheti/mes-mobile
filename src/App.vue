@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { onLaunch, onShow, onHide } from "@dcloudio/uni-app";
+import { onLaunch } from "@dcloudio/uni-app";
+import { useUserStore } from "@/stores/user";
 
-onLaunch(() => {});
-onShow(() => {});
-onHide(() => {});
+onLaunch(() => {
+  const token = useUserStore.getToken();
+  if (!token) {
+    uni.reLaunch({ url: "/pages/login/index" });
+  }
+});
 </script>
 
 <style lang="scss">
