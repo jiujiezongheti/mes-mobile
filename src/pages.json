@@ -1,4 +1,10 @@
 {
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^uv-(.*)": "uview-plus/components/uv-$1/uv-$1.vue"
+    }
+  },
   "pages": [
     {
       "path": "pages/login/index",
@@ -36,6 +42,18 @@
       "style": {
         "navigationBarTitleText": "设备管理"
       }
+    },
+    {
+      "path": "pages/stock/check",
+      "style": {
+        "navigationBarTitleText": "盘点录入"
+      }
+    },
+    {
+      "path": "pages/stock/check-task",
+      "style": {
+        "navigationBarTitleText": "盘点录入"
+      }
     }
   ],
   "globalStyle": {
@@ -45,25 +63,6 @@
     "backgroundColor": "#F8F8F8"
   },
   "tabBar": {
-    "color": "#999",
-    "selectedColor": "#007aff",
-    "list": [
-      {
-        "pagePath": "pages/dashboard/index",
-        "text": "首页"
-      },
-      {
-        "pagePath": "pages/order/index",
-        "text": "工单"
-      },
-      {
-        "pagePath": "pages/quality/index",
-        "text": "质量"
-      },
-      {
-        "pagePath": "pages/device/index",
-        "text": "设备"
-      }
-    ]
+    "list": []
   }
 }

@@ -48,6 +48,13 @@ export function request<T = unknown>(options: RequestOptions): Promise<T> {
         }
 
         if (data.code === 20000 || data.code === 20001) {
+          const token = uni.getStorageSync('token')
+          if (!token) {
+            // No token → real auth error (wrong credentials), not expiry
+            uni.showToast({ title: data.message, icon: 'none' })
+            reject(new Error(data.message))
+            return
+          }
           handleTokenExpired(options, resolve, reject);
           return;
         }
