@@ -7,6 +7,7 @@ const greeting = ref('')
 
 const cards = [
   { label: '工单管理', icon: '📋', path: '/pages/order/index', color: '#007aff' },
+  { label: '领料管理', icon: '📤', path: '/pages/stock/requisition', color: '#4caf50' },
   { label: '盘点录入', icon: '📦', path: '/pages/stock/check', color: '#00c48c' },
   { label: '质量检验', icon: '✅', path: '/pages/quality/index', color: '#ff9800' },
   { label: '设备管理', icon: '🔧', path: '/pages/device/index', color: '#9c27b0' },
