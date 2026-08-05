@@ -26,6 +26,12 @@
       }
     },
     {
+      "path": "pages/order/detail",
+      "style": {
+        "navigationBarTitleText": "工单详情"
+      }
+    },
+    {
       "path": "pages/task/index",
       "style": {
         "navigationBarTitleText": "作业任务"
