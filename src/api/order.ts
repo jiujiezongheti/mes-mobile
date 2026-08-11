@@ -24,18 +24,18 @@ export function startOrder(id: number) {
   })
 }
 
-export function reportOrder(id: number, quantity: number, defectiveQuantity = 0, remark?: string) {
+export function reportOrder(id: number, quantity: number, remark?: string) {
   return request<null>({
     url: '/mobile/order/report',
     method: 'POST',
-    data: { id, quantity, defective_quantity: defectiveQuantity, remark },
+    data: { id, quantity, remark },
   })
 }
 
-export function finishOrder(id: number, quantity?: number) {
+export function finishOrder(id: number) {
   return request<null>({
     url: '/mobile/order/finish',
     method: 'POST',
-    data: { id, quantity },
+    data: { id },
   })
 }

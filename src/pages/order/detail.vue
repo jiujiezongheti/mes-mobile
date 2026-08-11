@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { onLoad, onBackPress } from '@dcloudio/uni-app'
 import { getOrderDetail, startOrder, reportOrder, finishOrder } from '@/api/order'
 
@@ -10,17 +10,27 @@ const submitting = ref(false)
 
 const showReport = ref(false)
 const reportQty = ref('')
-const reportDefect = ref('')
 const reportRemark = ref('')
 
 const showFinish = ref(false)
-const finishQty = ref('')
+
+const hasPendingQuality = computed(() =>
+  (detail.value?.quality_checks || []).some((q: any) => q.status === 1),
+)
 
 const statusColor: Record<number, string> = {
   1: '#007aff',
   2: '#ff9800',
   3: '#00c48c',
   4: '#999',
+}
+
+const qualityColor: Record<number, string> = {
+  1: '#ff9800',
+  2: '#00c48c',
+  3: '#e6a23c',
+  4: '#f56c6c',
+  5: '#007aff',
 }
 
 onLoad((query) => {
@@ -32,7 +42,6 @@ async function loadData() {
   loading.value = true
   try {
     detail.value = await getOrderDetail(id.value)
-    finishQty.value = detail.value ? String(detail.value.quantity) : ''
   } catch (_) {
     detail.value = null
   } finally {
@@ -57,26 +66,14 @@ function handleStart() {
 
 function openReport() {
   reportQty.value = ''
-  reportDefect.value = ''
   reportRemark.value = ''
   showReport.value = true
 }
 
 async function confirmReport() {
   const qty = Number(reportQty.value)
-  const defect = Number(reportDefect.value || 0)
   if (!qty || qty <= 0) {
     uni.showToast({ title: '请输入有效数量', icon: 'none' })
-    return
-  }
-  if (defect < 0 || defect > qty) {
-    uni.showToast({ title: '不合格数量需在 0 ~ 总数之间', icon: 'none' })
-    return
-  }
-  const qualified = qty - defect
-  const remainingQualified = Number(detail.value.quantity) - Number(detail.value.produced_quantity)
-  if (qualified > remainingQualified) {
-    uni.showToast({ title: `合格数量不能超过剩余 ${remainingQualified}`, icon: 'none' })
     return
   }
   const totalCap = Number(detail.value.quantity) * 2
@@ -86,8 +83,8 @@ async function confirmReport() {
   }
   submitting.value = true
   try {
-    await reportOrder(id.value, qty, defect, reportRemark.value)
-    uni.showToast({ title: '报工成功', icon: 'success' })
+    await reportOrder(id.value, qty, reportRemark.value)
+    uni.showToast({ title: '报工成功，已生成待检质检单', icon: 'success' })
     showReport.value = false
     loadData()
   } catch (_) {
@@ -97,20 +94,19 @@ async function confirmReport() {
 }
 
 function openFinish() {
-  finishQty.value = detail.value ? String(detail.value.quantity) : ''
   showFinish.value = true
 }
 
 async function confirmFinish() {
-  const qty = Number(finishQty.value)
+  const qty = Number(detail.value.produced_quantity)
   uni.showModal({
     title: '提示',
-    content: `确认完工？完成后将生成入库待办（数量 ${qty || detail.value.quantity}）`,
+    content: `按质检合格数 ${qty} 生成入库待办，确认完工？`,
     success: async (res) => {
       if (!res.confirm) return
       submitting.value = true
       try {
-        await finishOrder(id.value, qty > 0 ? qty : undefined)
+        await finishOrder(id.value)
         uni.showToast({ title: '已完工', icon: 'success' })
         showFinish.value = false
         loadData()
@@ -148,13 +144,12 @@ onBackPress(() => {
           <text class="value">{{ detail.quantity }}</text>
         </view>
         <view class="row">
-          <text class="label">已产合格</text>
+          <text class="label">质检合格</text>
           <text class="value" style="color:#ff9800">{{ detail.produced_quantity }}</text>
         </view>
         <view class="row">
-          <text class="label">累计总数</text>
+          <text class="label">累计报工</text>
           <text class="value">{{ detail.total_produced }}</text>
-          <text class="value" v-if="detail.total_defective > 0" style="color:#f56c6c">(不良 {{ detail.total_defective }})</text>
         </view>
         <view class="row">
           <text class="label">计划时间</text>
@@ -202,11 +197,26 @@ onBackPress(() => {
             <text class="report-time">{{ r.created_at }}</text>
           </view>
           <view class="report-right">
-            <text class="report-qualified">合格 {{ r.qualified_quantity }}</text>
-            <text v-if="r.defective_quantity > 0" class="report-defect">不良 {{ r.defective_quantity }}</text>
+            <text class="report-qualified">报工 {{ r.quantity }}</text>
           </view>
         </view>
         <view v-if="!detail.reports.length" class="empty">暂无报工记录</view>
+      </view>
+
+      <view class="section">
+        <text class="section-title">质检记录</text>
+        <view v-for="q in detail.quality_checks" :key="q.id" class="report-row">
+          <view class="report-info">
+            <text class="report-code">{{ q.code }}</text>
+            <text class="report-time">检验 {{ q.inspection_quantity }}</text>
+          </view>
+          <view class="report-right">
+            <text class="tag" :style="{ color: qualityColor[q.status] || '#999', background: '#f0f0f0' }">{{ q.status_name }}</text>
+            <text v-if="q.status !== 1" class="report-qualified">合格 {{ q.qualified_quantity }}</text>
+            <text v-if="q.defective_quantity > 0" class="report-defect">不良 {{ q.defective_quantity }}</text>
+          </view>
+        </view>
+        <view v-if="!detail.quality_checks.length" class="empty">暂无质检记录，报工后自动生成</view>
       </view>
 
       <view class="footer" v-if="detail.status === 1 || detail.status === 2">
@@ -215,7 +225,13 @@ onBackPress(() => {
         </button>
         <template v-if="detail.status === 2">
           <button class="action-btn report" :disabled="submitting" @click="openReport">报工</button>
-          <button class="action-btn finish" :disabled="submitting" @click="openFinish">完工</button>
+          <button
+            class="action-btn finish"
+            :disabled="submitting || hasPendingQuality"
+            @click="openFinish"
+          >
+            完工
+          </button>
         </template>
       </view>
     </template>
@@ -229,12 +245,12 @@ onBackPress(() => {
           <input v-model="reportQty" type="digit" class="overlay-input" placeholder="本次完成总数" />
         </view>
         <view class="overlay-row">
-          <text class="overlay-label">不合格</text>
-          <input v-model="reportDefect" type="digit" class="overlay-input" placeholder="自检不合格数（默认0）" />
-        </view>
-        <view class="overlay-row">
           <text class="overlay-label">备注</text>
           <input v-model="reportRemark" class="overlay-input" placeholder="选填" />
+        </view>
+        <view class="overlay-row">
+          <text class="overlay-label">提示</text>
+          <text class="overlay-tip">报工后自动生成待检质检单，由质检员判定合格数</text>
         </view>
         <view class="overlay-actions">
           <button class="overlay-btn cancel" @click="showReport = false">取消</button>
@@ -247,12 +263,12 @@ onBackPress(() => {
       <view class="overlay-box" @click.stop>
         <text class="overlay-title">完工确认</text>
         <view class="overlay-row">
-          <text class="overlay-label">完工数量</text>
-          <input v-model="finishQty" type="digit" class="overlay-input" placeholder="默认计划数量" />
+          <text class="overlay-label">入库数量</text>
+          <text class="overlay-tip">按质检合格数 {{ detail.produced_quantity }} 生成入库待办</text>
         </view>
         <view class="overlay-row">
           <text class="overlay-label">提示</text>
-          <text class="overlay-tip">完成后生成入库待办，由 PC 端确认入库</text>
+          <text class="overlay-tip">需全部质检单判定完成；确认后由 PC 端确认入库</text>
         </view>
         <view class="overlay-actions">
           <button class="overlay-btn cancel" @click="showFinish = false">取消</button>
@@ -292,6 +308,7 @@ onBackPress(() => {
 .report-row { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0; border-bottom: 2rpx solid #f5f5f5; }
 .report-row:last-child { border-bottom: none; }
 .report-qty { font-size: 30rpx; color: #00c48c; font-weight: 600; display: block; }
+.report-code { font-size: 28rpx; color: #ff9800; font-weight: 600; display: block; }
 .report-time { font-size: 22rpx; color: #999; display: block; margin-top: 4rpx; }
 .report-right { text-align: right; }
 .report-qualified { font-size: 24rpx; color: #00c48c; display: block; }
