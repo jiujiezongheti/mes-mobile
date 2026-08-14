@@ -86,6 +86,10 @@ onBackPress(() => {
           <text class="value">{{ item.quantity }}</text>
         </view>
         <view class="card-row">
+          <text class="label">报工</text>
+          <text class="value">{{ item.total_reported || 0 }}</text>
+        </view>
+        <view class="card-row">
           <text class="label">已产</text>
           <text class="value" :style="{ color: item.status === 3 ? '#00c48c' : '#ff9800' }">{{ item.produced_quantity }}</text>
         </view>

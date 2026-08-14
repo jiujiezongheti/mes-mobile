@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { onLoad, onBackPress } from '@dcloudio/uni-app'
+import { onLoad } from '@dcloudio/uni-app'
 import { getOrderDetail, startOrder, reportOrder, finishOrder } from '@/api/order'
 
 const id = ref(0)
@@ -117,11 +117,6 @@ async function confirmFinish() {
     },
   })
 }
-
-onBackPress(() => {
-  uni.navigateBack()
-  return true
-})
 </script>
 
 <template>
