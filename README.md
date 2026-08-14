@@ -1,24 +1,28 @@
 # mes-mobile
 
-MES 制造执行系统移动端，基于 UniApp 3 + Vue 3 开发，支持 H5 / 小程序 / App 多端运行。
+MES 制造执行系统移动端，基于 UniApp 3 + Vue 3 + uview-plus 开发，支持 H5 / 小程序 / App 多端运行。
 
 ## 技术栈
 
 | 名称 | 版本 |
 |------|------|
-| Vue | ^3.5 |
 | UniApp | ^3.0 |
-| uview-plus | ^3.3 |
-| TypeScript | ~5.7 |
-| Vite | ^6.0 |
+| Vue | ^3.4 |
+| uview-plus | ^3.8 |
+| TypeScript | ^4.9 |
+| Vite | ^5.2 |
+| Sass | ^1.10 |
 
 ## 功能列表
 
-- [ ] PDA 扫码作业
-- [ ] 工单执行与报工
-- [ ] 质量检验录入
+- [x] 登录 / 退出
+- [x] 首页工作台（功能卡片入口）
+- [x] 工单执行：列表 / 详情 / 开始生产 / 报工（自动生成质检单）/ 完工
+- [x] 质量检验：质检单列表 / 判定（合格 / 返工 / 报废 / 让步接收）
+- [x] 领料管理：待领任务列表 / 扫码领料录入
+- [x] 库存盘点：待盘任务列表 / 扫码录入 / 提交审核
+- [x] 设备管理：设备列表
 - [ ] 设备点检巡检
-- [ ] 物料扫码追溯
 - [ ] 生产进度看板
 
 ## 快速开始
@@ -36,8 +40,8 @@ npm run dev:h5
 # 微信小程序
 npm run dev:mp-weixin
 
-# App 打包
-npm run dev:app
+# 类型检查
+npm run type-check
 ```
 
 > 默认账号：`admin` / `admin123`
@@ -46,17 +50,16 @@ npm run dev:app
 
 ```
 src/
-├── api/            # API 请求层
-├── pages/          # 页面
+├── api/            # API 请求层（按模块拆分）
+├── pages/          # 页面（文件全小写）
 │   ├── login/
 │   ├── dashboard/
-│   ├── order/
-│   ├── task/
-│   ├── quality/
-│   └── device/
-├── components/     # 公共组件
-├── stores/         # 状态管理
-└── utils/          # 工具函数
+│   ├── order/      # 工单列表 / 详情
+│   ├── quality/    # 质检
+│   ├── device/     # 设备
+│   └── stock/      # 盘点 / 领料
+├── stores/         # 状态管理（uni.storage）
+└── utils/          # 工具（request 网络请求 / native 原生能力）
 ```
 
 ## 相关项目

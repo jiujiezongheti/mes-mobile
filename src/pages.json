@@ -32,12 +32,6 @@
       }
     },
     {
-      "path": "pages/task/index",
-      "style": {
-        "navigationBarTitleText": "作业任务"
-      }
-    },
-    {
       "path": "pages/quality/index",
       "style": {
         "navigationBarTitleText": "质量检验"
