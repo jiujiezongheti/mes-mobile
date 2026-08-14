@@ -24,11 +24,27 @@ export function startOrder(id: number) {
   })
 }
 
-export function reportOrder(id: number, quantity: number, remark?: string) {
+export function startProcess(id: number, processId: number) {
+  return request<null>({
+    url: '/mobile/order/process/start',
+    method: 'POST',
+    data: { id, process_id: processId },
+  })
+}
+
+export function finishProcess(id: number, processId: number) {
+  return request<null>({
+    url: '/mobile/order/process/finish',
+    method: 'POST',
+    data: { id, process_id: processId },
+  })
+}
+
+export function reportOrder(id: number, quantity: number, remark?: string, processId?: number) {
   return request<null>({
     url: '/mobile/order/report',
     method: 'POST',
-    data: { id, quantity, remark },
+    data: { id, quantity, remark, ...(processId ? { process_id: processId } : {}) },
   })
 }
 

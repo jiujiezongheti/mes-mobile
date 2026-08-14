@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getOrderDetail, startOrder, reportOrder, finishOrder } from '@/api/order'
+import { getOrderDetail, startOrder, startProcess, finishProcess, reportOrder, finishOrder } from '@/api/order'
 
 const id = ref(0)
 const detail = ref<any>(null)
@@ -14,6 +14,21 @@ const reportRemark = ref('')
 
 const showFinish = ref(false)
 
+const hasProcesses = computed(() => !!(detail.value?.processes && detail.value.processes.length))
+
+const allProcessesCompleted = computed(() => {
+  if (!hasProcesses.value) return false
+  return detail.value.processes.every((p: any) => p.status === 3)
+})
+
+const currentProcess = computed(() => {
+  if (!hasProcesses.value) return null
+  const running = detail.value.processes.find((p: any) => p.status === 2)
+  if (running) return running
+  const next = detail.value.processes.find((p: any) => p.status === 1)
+  return next || null
+})
+
 const hasPendingQuality = computed(() =>
   (detail.value?.quality_checks || []).some((q: any) => q.status === 1),
 )
@@ -23,6 +38,12 @@ const statusColor: Record<number, string> = {
   2: '#ff9800',
   3: '#00c48c',
   4: '#999',
+}
+
+const processStatusColor: Record<number, string> = {
+  1: '#999',
+  2: '#ff9800',
+  3: '#00c48c',
 }
 
 const qualityColor: Record<number, string> = {
@@ -52,12 +73,48 @@ async function loadData() {
 function handleStart() {
   uni.showModal({
     title: '提示',
-    content: '确定开始生产？',
+    content: hasProcesses.value ? '确定开始生产？开始后按工序流转作业' : '确定开始生产？',
     success: async (res) => {
       if (!res.confirm) return
       try {
         await startOrder(id.value)
         uni.showToast({ title: '已开始生产', icon: 'success' })
+        loadData()
+      } catch (_) {}
+    },
+  })
+}
+
+function isProcessStartable(p: any) {
+  if (p.status !== 1) return false
+  const prev = detail.value.processes.find((x: any) => x.seq === p.seq - 1)
+  return !prev || prev.status === 3
+}
+
+function handleProcessStart(p: any) {
+  uni.showModal({
+    title: '提示',
+    content: `确定开始工序「${p.operation_name}」？`,
+    success: async (res) => {
+      if (!res.confirm) return
+      try {
+        await startProcess(id.value, p.id)
+        uni.showToast({ title: '工序已开始', icon: 'success' })
+        loadData()
+      } catch (_) {}
+    },
+  })
+}
+
+function handleProcessFinish(p: any) {
+  uni.showModal({
+    title: '提示',
+    content: `确定完成工序「${p.operation_name}」？`,
+    success: async (res) => {
+      if (!res.confirm) return
+      try {
+        await finishProcess(id.value, p.id)
+        uni.showToast({ title: '工序已完成', icon: 'success' })
         loadData()
       } catch (_) {}
     },
@@ -76,14 +133,21 @@ async function confirmReport() {
     uni.showToast({ title: '请输入有效数量', icon: 'none' })
     return
   }
-  const totalCap = Number(detail.value.quantity) * 2
-  if (Number(detail.value.total_produced || 0) + qty > totalCap) {
-    uni.showToast({ title: `累计报工不能超过 ${totalCap}`, icon: 'none' })
+  const orderCap = Number(detail.value.quantity) * 2
+  if (Number(detail.value.total_produced || 0) + qty > orderCap) {
+    uni.showToast({ title: `累计报工不能超过 ${orderCap}`, icon: 'none' })
     return
+  }
+  if (hasProcesses.value && currentProcess.value) {
+    const procCap = Number(currentProcess.value.planned_quantity) * 2
+    if (Number(currentProcess.value.reported_quantity || 0) + qty > procCap) {
+      uni.showToast({ title: `该工序累计报工不能超过 ${procCap}`, icon: 'none' })
+      return
+    }
   }
   submitting.value = true
   try {
-    await reportOrder(id.value, qty, reportRemark.value)
+    await reportOrder(id.value, qty, reportRemark.value, hasProcesses.value ? currentProcess.value?.id : undefined)
     uni.showToast({ title: '报工成功，已生成待检质检单', icon: 'success' })
     showReport.value = false
     loadData()
@@ -172,6 +236,41 @@ async function confirmFinish() {
         </view>
       </view>
 
+      <view class="section" v-if="hasProcesses">
+        <text class="section-title">工序流转</text>
+        <view v-for="p in detail.processes" :key="p.id" class="proc-row" :class="{ active: p.status === 2 }">
+          <view class="proc-index" :class="{ done: p.status === 3, running: p.status === 2 }">
+            {{ p.seq + 1 }}
+          </view>
+          <view class="proc-info">
+            <view class="proc-head">
+              <text class="proc-name">{{ p.operation_name }}</text>
+              <text class="tag" :style="{ color: processStatusColor[p.status] || '#999', background: '#f0f0f0' }">{{ p.status_name }}</text>
+            </view>
+            <view class="proc-meta">
+              <text>计划 {{ p.planned_quantity }}</text>
+              <text v-if="p.reported_quantity"> · 报工 {{ p.reported_quantity }}</text>
+              <text v-if="p.qualified_quantity"> · 合格 {{ p.qualified_quantity }}</text>
+            </view>
+            <view class="proc-meta" v-if="p.actual_start_date">
+              <text>开始 {{ p.actual_start_date }}</text>
+              <text v-if="p.actual_end_date"> · 完成 {{ p.actual_end_date }}</text>
+            </view>
+          </view>
+          <view class="proc-actions" v-if="detail.status === 2">
+            <button v-if="p.status === 1 && isProcessStartable(p)" class="mini-btn primary" :disabled="submitting" @click="handleProcessStart(p)">开始</button>
+            <button v-if="p.status === 2" class="mini-btn orange" :disabled="submitting" @click="openReport">报工</button>
+            <button v-if="p.status === 2" class="mini-btn green" :disabled="submitting" @click="handleProcessFinish(p)">完成</button>
+          </view>
+        </view>
+        <view class="proc-tip" v-if="detail.status === 2 && !allProcessesCompleted">
+          按顺序执行工序，当前工序：{{ currentProcess?.operation_name || '—' }}
+        </view>
+        <view class="proc-tip done-tip" v-if="detail.status === 2 && allProcessesCompleted">
+          全部工序已完成，可执行完工
+        </view>
+      </view>
+
       <view class="section">
         <text class="section-title">物料需求</text>
         <view v-for="m in detail.materials" :key="m.material_id" class="mat-row">
@@ -189,7 +288,7 @@ async function confirmFinish() {
         <view v-for="r in detail.reports" :key="r.id" class="report-row">
           <view class="report-info">
             <text class="report-qty">+{{ r.quantity }}</text>
-            <text class="report-time">{{ r.created_at }}</text>
+            <text class="report-time">{{ r.process_name ? r.process_name + ' · ' : '' }}{{ r.created_at }}</text>
           </view>
           <view class="report-right">
             <text class="report-qualified">报工 {{ r.quantity }}</text>
@@ -219,10 +318,18 @@ async function confirmFinish() {
           开始生产
         </button>
         <template v-if="detail.status === 2">
-          <button class="action-btn report" :disabled="submitting" @click="openReport">报工</button>
+          <button
+            v-if="hasProcesses"
+            class="action-btn report"
+            :disabled="submitting || !currentProcess || currentProcess.status !== 2"
+            @click="openReport"
+          >
+            报工
+          </button>
+          <button v-else class="action-btn report" :disabled="submitting" @click="openReport">报工</button>
           <button
             class="action-btn finish"
-            :disabled="submitting || hasPendingQuality"
+            :disabled="submitting || hasPendingQuality || (hasProcesses && !allProcessesCompleted)"
             @click="openFinish"
           >
             完工
@@ -302,6 +409,27 @@ async function confirmFinish() {
 .mat-unit { font-size: 20rpx; color: #999; font-weight: 400; margin-left: 6rpx; }
 .report-row { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0; border-bottom: 2rpx solid #f5f5f5; }
 .report-row:last-child { border-bottom: none; }
+.proc-row { display: flex; align-items: center; padding: 16rpx 0; border-bottom: 2rpx solid #f5f5f5; }
+.proc-row:last-child { border-bottom: none; }
+.proc-row.active { background: #f0f7ff; border-radius: 12rpx; padding-left: 12rpx; padding-right: 12rpx; }
+.proc-index {
+  width: 52rpx; height: 52rpx; border-radius: 50%; background: #eee; color: #999;
+  font-size: 26rpx; display: flex; align-items: center; justify-content: center; margin-right: 20rpx; flex-shrink: 0;
+}
+.proc-index.done { background: #00c48c; color: #fff; }
+.proc-index.running { background: #ff9800; color: #fff; }
+.proc-info { flex: 1; min-width: 0; }
+.proc-head { display: flex; align-items: center; justify-content: space-between; }
+.proc-name { font-size: 28rpx; color: #333; font-weight: 600; }
+.proc-meta { font-size: 22rpx; color: #999; margin-top: 6rpx; }
+.proc-actions { display: flex; gap: 12rpx; margin-left: 12rpx; }
+.mini-btn { height: 56rpx; line-height: 56rpx; padding: 0 24rpx; border-radius: 28rpx; font-size: 24rpx; text-align: center; border: none; color: #fff; }
+.mini-btn.primary { background: #007aff; }
+.mini-btn.orange { background: #ff9800; }
+.mini-btn.green { background: #00c48c; }
+.mini-btn:disabled { opacity: 0.5; }
+.proc-tip { font-size: 22rpx; color: #ff9800; margin-top: 12rpx; }
+.proc-tip.done-tip { color: #00c48c; }
 .report-qty { font-size: 30rpx; color: #00c48c; font-weight: 600; display: block; }
 .report-code { font-size: 28rpx; color: #ff9800; font-weight: 600; display: block; }
 .report-time { font-size: 22rpx; color: #999; display: block; margin-top: 4rpx; }
